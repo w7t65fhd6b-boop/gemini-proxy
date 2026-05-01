@@ -16,7 +16,7 @@ app.post('/v1/chat', async (req, res) => {
         const API_KEY = process.env.GEMINI_API_KEY; // Убедись, что в Timeweb переменная называется так
 
         const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
             {
                 contents: [{
                     parts: [{ text: lastMessage }]
