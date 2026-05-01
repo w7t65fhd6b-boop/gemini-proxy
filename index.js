@@ -1,31 +1,37 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
+
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
-// Тот самый секретный ключ, который мы спрячем
-const SECRET_API_KEY = process.env.GEMINI_API_KEY; 
-const TARGET_URL = "https://agent.timeweb.cloud/api/v1/cloud-ai/agents/9e5baebd-45b8-4e14-9500-9dd2aa2d417c/v1/chat/completions";
+// Порт Timeweb выдает автоматически через переменную окружения PORT
+const PORT = process.env.PORT || 8080;
 
 app.post('/v1/chat', async (req, res) => {
     try {
-        // Добавляем проверку, что запрос пришел именно от вашего приложения
-        if (req.headers['x-app-token'] !== 'MyUniqueAppToken123') {
-            return res.status(403).send('Forbidden');
-        }
+        const { messages } = req.body;
 
-        const response = await axios.post(TARGET_URL, req.body, {
-            headers: {
-                'Authorization': `Bearer ${SECRET_API_KEY}`,
-                'Content-Type': 'application/json'
+        const response = await axios.post(
+            `https://agent.timeweb.cloud/api/v1/agents/${process.env.AGENT_ID}/chat/completions`,
+            {
+                messages: messages,
+                stream: false
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.TIMEWEB_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
             }
-        });
+        );
+
         res.json(response.data);
     } catch (error) {
-        res.status(error.response?.status || 500).send(error.message);
+        console.error('Error details:', error.response?.data || error.message);
+        res.status(500).json({ error: 'Proxy server error' });
     }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
