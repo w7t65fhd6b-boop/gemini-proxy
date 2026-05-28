@@ -18,7 +18,6 @@ app.post('/v1/chat', async (req, res) => {
         const systemInstruction = systemMsg ? systemMsg.content : "You are a helpful assistant.";
 
         // 2. Преобразуем остальные сообщения (историю) для Gemini
-        // Исключаем системное сообщение и преобразуем роли
         const history = messages
             .filter(m => m.role !== 'system')
             .map(m => ({
@@ -26,9 +25,9 @@ app.post('/v1/chat', async (req, res) => {
                 parts: [{ text: m.content }]
             }));
 
-        // 3. Отправляем запрос в Gemini
+        // 3. Отправляем запрос в Gemini (Обновили модель на стабильную gemini-1.5-flash)
         const response = await axios.post(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
             {
                 system_instruction: {
                     parts: [{ text: systemInstruction }]
@@ -37,10 +36,19 @@ app.post('/v1/chat', async (req, res) => {
             }
         );
 
-        // 4. Вытаскиваем текст ответа
-        const aiText = response.data.candidates[0].content.parts[0].text;
+        // Печатаем ответ в логи Timeweb для контроля
+        console.log("Ответ от Google:", JSON.stringify(response.data));
 
-        // 5. Возвращаем ответ в формате OpenAI, который ждет твой Swift-код (OpenAIResponse)
+        // 4. Безопасно вытаскиваем текст ответа (используем опциональную цепочку ?.)
+        const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!aiText) {
+            // Если текст не пришел (например, сработал фильтр безопасности Google)
+            console.error("Google вернул пустой ответ или заблокировал контент:", response.data);
+            return res.status(500).json({ error: 'Google returned empty response or filtered content' });
+        }
+
+        // 5. Возвращаем ответ в формате OpenAI для твоего Swift-кода
         res.json({
             choices: [{
                 message: {
